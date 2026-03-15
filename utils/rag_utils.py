@@ -35,7 +35,7 @@ def search_recipes(query: str) -> str:
     spice combinations, and preparation tips. Use this for any question about how
     to cook a dish, what ingredients are needed, or traditional cooking methods."""
     try:
-        results = get_vector_store().similarity_search(query, k=4)
+        results = get_vector_store().similarity_search(query, k=5)
         if not results:
             return "No relevant recipe found in the knowledge base."
         return "\n\n---\n\n".join([doc.page_content for doc in results])

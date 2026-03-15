@@ -4,8 +4,10 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
-from models.llm import get_chatgroq_model
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_classic.agents import create_tool_calling_agent, AgentExecutor
+from models.llm import get_chatopenai_model
 from utils.rag_utils import search_recipes
 from utils.search_utils import web_search
 
@@ -22,14 +24,20 @@ You have two tools:
    current ingredient prices, local availability, substitutes, restaurants, nutrition, or food trends.
 
 Always try search_recipes first. Fall back to web_search only if needed.
-
-{mode}"""
+And answer the general questions or conversations like greeting etc without calling any tool."""
 
 
 @st.cache_resource
-def get_llm_with_tools():
-    llm = get_chatgroq_model()
-    return llm.bind_tools([search_recipes, web_search])
+def get_agent():
+    llm = get_chatopenai_model()
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", SYSTEM_PROMPT),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+        MessagesPlaceholder("agent_scratchpad"),
+    ])
+    agent = create_tool_calling_agent(llm, [search_recipes, web_search], prompt)
+    return AgentExecutor(agent=agent, tools=[search_recipes, web_search], verbose=True)
 
 
 def run_chat(messages, mode):
@@ -40,33 +48,28 @@ def run_chat(messages, mode):
             else "Give a DETAILED response with full ingredient list, step-by-step instructions, tips, and serving suggestions."
         )
 
-        formatted = [SystemMessage(content=SYSTEM_PROMPT.format(mode=mode_text))]
-        for msg in messages:
+        chat_history = []
+        for msg in messages[:-1]:
             if msg["role"] == "user":
-                formatted.append(HumanMessage(content=msg["content"]))
+                chat_history.append(HumanMessage(content=msg["content"]))
             else:
-                formatted.append(AIMessage(content=msg["content"]))
+                chat_history.append(AIMessage(content=msg["content"]))
 
-        llm_with_tools = get_llm_with_tools()
-        response = llm_with_tools.invoke(formatted)
-
-        if response.tool_calls:
-            formatted.append(response)
-            tool_map = {"search_recipes": search_recipes, "web_search": web_search}
-            for tc in response.tool_calls:
-                result = tool_map[tc["name"]].invoke(tc["args"])
-                formatted.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
-            return get_chatgroq_model().invoke(formatted).content
-
-        return response.content
+        agent = get_agent()
+        result = agent.invoke({
+            "input": messages[-1]["content"],
+            "chat_history": chat_history,
+            "mode": mode_text,
+        })
+        return result["output"]
 
     except Exception as e:
         return f"Error: {str(e)}"
 
 
 def main():
-    st.set_page_config(page_title="Rasa", page_icon="🍛", layout="wide")
-    st.title("🍛 Rasa — Indian Recipe Assistant")
+    st.set_page_config(page_title="Rasa", layout="wide")
+    st.title("Rasa - Indian Recipe Assistant")
     st.caption("Ask me anything about Indian cooking!")
 
     with st.sidebar:
@@ -74,14 +77,14 @@ def main():
         mode = st.radio(
             "Response Mode",
             options=["concise", "detailed"],
-            format_func=lambda x: "⚡ Concise" if x == "concise" else "Detailed",
+            format_func=lambda x: "Concise" if x == "concise" else "Detailed",
         )
         st.divider()
         st.markdown("**When each tool is used**")
-        st.markdown(" **RAG** — recipes, ingredients, cooking steps")
-        st.markdown(" **Web** — prices, substitutes, restaurants, trends")
+        st.markdown("RAG - recipes, ingredients, cooking steps")
+        st.markdown("Web - prices, substitutes, restaurants, trends")
         st.divider()
-        if st.button(" Clear Chat", use_container_width=True):
+        if st.button("Clear Chat", use_container_width=True):
             st.session_state.messages = []
             st.rerun()
 
@@ -90,7 +93,7 @@ def main():
 
     if not st.session_state.messages:
         with st.chat_message("assistant"):
-            st.markdown("Namaste! 🙏 I'm Rasa. Ask me for a recipe, cooking tips, or current ingredient prices!")
+            st.markdown("Namaste! I'm Rasa. Ask me for a recipe, cooking tips, or current ingredient prices!")
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):

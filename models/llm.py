@@ -3,16 +3,16 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from langchain_groq import ChatGroq
-from config.config import GROQ_API_KEY, GROQ_MODEL
+from langchain_openai import ChatOpenAI
+from config.config import OPENAI_API_KEY, OPENAI_MODEL
 
 
-def get_chatgroq_model():
+def get_chatopenai_model():
     try:
-        return ChatGroq(
-            api_key=GROQ_API_KEY,
-            model=GROQ_MODEL,
+        return ChatOpenAI(
+            api_key=OPENAI_API_KEY,
+            model=OPENAI_MODEL,
             temperature=0.3,
         )
     except Exception as e:
-        raise RuntimeError(f"Failed to initialize Groq model: {str(e)}")
+        raise RuntimeError(f"Failed to initialize OpenAI model: {str(e)}")

@@ -1,9 +1,9 @@
 import os
 
-GROQ_API_KEY = "YOUR_API_KEY"
-SERP_API_KEY = "YOUR_API_KEY"
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "your_api_key")
+OPENAI_MODEL = "gpt-4o-mini"
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+SERP_API_KEY = os.environ.get("SERP_API_KEY", "your_api_key")
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 PDF_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "Indian-Recipes.pdf")
