@@ -1,7 +1,7 @@
 import os
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "your_api_key")
-SERP_API_KEY = os.environ.get("SERP_API_KEY", "your_api_key")
+GROQ_API_KEY = "YOUR_API_KEY"
+SERP_API_KEY = "YOUR_API_KEY"
 
 GROQ_MODEL = "llama-3.3-70b-versatile"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
